@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Matiasma CCTV - Ritual Final</title>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --neon-blue: #00f2ff; 
+            --gold: #ffd700; 
+            --alert: #ff2222; 
+            --void: #010105;
+        }
+        body { margin: 0; overflow: hidden; background: var(--void); font-family: 'Special Elite', cursive; }
+        
+        /* CINESCOPE OVERLAY */
+        #cctv-overlay { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.1) 50%), 
+                        radial-gradient(circle, transparent 60%, black 100%);
+            background-size: 100% 3px, 100% 100%; 
+            pointer-events: none; z-index: 100; opacity: 0.6; 
+        }
+
+        /* HUD ELEMENTS */
+        .hud-panel {
+            position: absolute; z-index: 110; 
+            background: rgba(0, 5, 10, 0.7); 
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 15px;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
+            backdrop-filter: blur(2px);
+            transition: border-color 0.3s, color 0.3s;
+        }
+
+        #ui-top-left { top: 20px; left: 20px; width: 220px; }
+        #ui-bottom-left { bottom: 20px; left: 20px; width: 300px; height: 120px; display: flex; flex-direction: column-reverse; overflow: hidden; font-size: 11px; border-top: 2px solid var(--neon-blue); }
+        #ui-bottom-right { bottom: 20px; right: 20px; text-align: right; }
+
+        .label { font-size: 10px; letter-spacing: 2px; opacity: 0.7; margin-bottom: 5px; }
+        .big-text { font-size: 18px; font-weight: bold; text-shadow: 0 0 5px currentColor; }
+        .instruction { font-size: 14px; margin: 4px 0; color: #fff; }
+        
+        .log-entry { margin-top: 2px; opacity: 0.8; }
+        .log-entry::before { content: "> "; color: var(--gold); }
+
+        /* FLOATING WHISPERS */
+        .whisper { 
+            position: absolute; font-size: 14px; color: var(--neon-blue); 
+            pointer-events: none; z-index: 50; 
+            text-shadow: 0 0 8px var(--neon-blue); 
+            font-weight: bold; text-transform: uppercase; 
+            white-space: nowrap;
+            transition: opacity 0.3s;
+        }
+
+        #input_video { display: none; }
+        
+        /* STATE CLASSES */
+        .mode-cursed { color: var(--alert) !important; border-color: var(--alert) !important; }
+        .mode-cleanse { color: var(--gold) !important; border-color: var(--gold) !important; }
+    </style>
+</head>
+<body>
+
+    <div id="cctv-overlay"></div>
+    
+    <div id="ui-top-left" class="hud-panel">
+        <div class="label">SYSTEM_STATUS</div>
+        <div id="status-text" class="big-text">OBSERVING</div>
+    </div>
+
+    <div id="ui-bottom-right" class="hud-panel">
+        <div class="label">RITUAL PROTOCOLS</div>
+        <div class="instruction">1. RAISE PALM TO DISPERSE</div>
+        <div class="instruction">2. PINCH TO CURSE (PUPIL)</div>
+        <div class="instruction">3. MOVE HAND TO ROTATE</div>
+    </div>
+
+    <div id="ui-bottom-left" class="hud-panel" id="console-log"></div>
+    <div id="text-container"></div>
+    <video id="input_video" playsinline></video>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script type="importmap"> { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } } </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- CONFIG ---
+        const EYE_PARTICLE_COUNT = 40000;
+        const SKY_PARTICLE_COUNT = 1500;
+        const CURSE_WORDS = ["KAKO MATI", "BASKANIA", "ENVY", "JEALOUSY", "GLOSSOFAGIA", "PHTHONOS"];
+        const STATE = { IDLE: 0, CURSED: 1, CLEANSE: 2 };
+        
+        // --- GLOBALS ---
+        let scene, camera, renderer;
+        let eyeSystem, skySystem;
+        let eyePos, eyeCol, eyeBasePos, eyeBaseCol, eyeExplosionDir; 
+        let currentState = STATE.IDLE;
+        let whispers = [];
+        
+        // --- ANIMATION VARS ---
+        let targetRotation = { x: 0, y: 0 }; 
+        let curseFactor = 0; 
+        let cleanseFactor = 0;
+        let randomGlitch = 0; // For random red flashes
+
+        function log(msg) {
+            const container = document.getElementById('ui-bottom-left');
+            const d = document.createElement('div');
+            d.className = 'log-entry';
+            d.innerText = msg;
+            container.prepend(d);
+            if(container.children.length > 6) container.removeChild(container.lastChild);
+        }
+
+        // --- TEXTURE GENERATOR FOR CIRCLES ---
+        function getGlowSprite() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32; canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            // Soft radial gradient
+            const grad = ctx.createRadialGradient(16,16,0, 16,16,16);
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.2, 'rgba(255,255,255,0.8)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,32,32);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x010105, 0.001); // Subtle fog
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.z = 100;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.body.appendChild(renderer.domElement);
+
+            createSky();
+            createEye();
+            createWhispers();
+            animate();
+            log("SYSTEM_ONLINE: WAITING_FOR_INPUT");
+            
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        function createSky() {
+            const geo = new THREE.BufferGeometry();
+            const pos = [];
+            
+            for(let i=0; i<SKY_PARTICLE_COUNT; i++) {
+                pos.push((Math.random()-0.5) * 1200); 
+                pos.push((Math.random()-0.5) * 800); 
+                pos.push((Math.random()-0.5) * 600 - 200); 
+            }
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            
+            const mat = new THREE.PointsMaterial({
+                size: 4, 
+                map: getGlowSprite(), // Use circle texture
+                transparent: true, 
+                opacity: 0.4,
+                color: 0xaaccff,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            skySystem = new THREE.Points(geo, mat);
+            scene.add(skySystem);
+        }
+
+        function createEye() {
+            const geo = new THREE.BufferGeometry();
+            eyePos = new Float32Array(EYE_PARTICLE_COUNT * 3);
+            eyeBasePos = new Float32Array(EYE_PARTICLE_COUNT * 3);
+            eyeExplosionDir = new Float32Array(EYE_PARTICLE_COUNT * 3);
+            eyeCol = new Float32Array(EYE_PARTICLE_COUNT * 3);
+            eyeBaseCol = new Float32Array(EYE_PARTICLE_COUNT * 3);
+
+            const cPupil = new THREE.Color(0x000000); 
+            const cTurquoise = new THREE.Color(0x00E0FF); 
+            const cWhite = new THREE.Color(0xEEFFFF); 
+            const cDeepBlue = new THREE.Color(0x0022AA); 
+
+            for (let i = 0; i < EYE_PARTICLE_COUNT; i++) {
+                const idx = i * 3;
+
+                // Shape
+                let r = Math.random() * 60; 
+                let theta = Math.random() * Math.PI * 2;
+                let thickness = Math.sqrt(60*60 - r*r) * 0.4;
+                let z = (Math.random() - 0.5) * thickness;
+                let x = r * Math.cos(theta);
+                let y = r * Math.sin(theta);
+
+                eyePos[idx] = x; eyePos[idx+1] = y; eyePos[idx+2] = z;
+                eyeBasePos[idx] = x; eyeBasePos[idx+1] = y; eyeBasePos[idx+2] = z;
+
+                // Explosion Vector (Random Sphere Direction)
+                let exPhi = Math.acos(2 * Math.random() - 1);
+                let exTheta = Math.random() * 2 * Math.PI;
+                eyeExplosionDir[idx] = Math.sin(exPhi) * Math.cos(exTheta);
+                eyeExplosionDir[idx+1] = Math.sin(exPhi) * Math.sin(exTheta);
+                eyeExplosionDir[idx+2] = Math.cos(exPhi);
+
+                // Colors (Rings)
+                let c = new THREE.Color();
+                if (r < 12) c.copy(cPupil);
+                else if (r < 28) {
+                    c.lerpColors(cPupil, cTurquoise, (r-12)/5); 
+                    if(r > 15) c.copy(cTurquoise);
+                } else if (r < 42) {
+                    c.lerpColors(cTurquoise, cWhite, (r-28)/5);
+                    if(r > 32) c.copy(cWhite);
+                } else {
+                    c.lerpColors(cWhite, cDeepBlue, (r-42)/8);
+                    if(r > 48) c.copy(cDeepBlue);
+                }
+
+                // Noise
+                c.offsetHSL(0, 0, (Math.random()-0.5)*0.1);
+
+                eyeCol[idx] = c.r; eyeCol[idx+1] = c.g; eyeCol[idx+2] = c.b;
+                eyeBaseCol[idx] = c.r; eyeBaseCol[idx+1] = c.g; eyeBaseCol[idx+2] = c.b;
+            }
+
+            geo.setAttribute('position', new THREE.BufferAttribute(eyePos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(eyeCol, 3));
+            
+            eyeSystem = new THREE.Points(geo, new THREE.PointsMaterial({
+                size: 0.9, vertexColors: true, transparent: true, opacity: 0.9,
+                blending: THREE.AdditiveBlending, depthWrite: false
+            }));
+            scene.add(eyeSystem);
+        }
+
+        function createWhispers() {
+            const container = document.getElementById('text-container');
+            for(let i=0; i<15; i++) {
+                const el = document.createElement('div');
+                el.className = 'whisper';
+                el.innerText = CURSE_WORDS[Math.floor(Math.random() * CURSE_WORDS.length)];
+                container.appendChild(el);
+                whispers.push({
+                    el: el,
+                    offset: Math.random() * 100,
+                    speed: 0.2 + Math.random() * 0.3,
+                    radius: 70 + Math.random() * 60,
+                    yAmp: 20 + Math.random() * 40,
+                    yFreq: 0.5 + Math.random() * 1.5
+                });
+            }
+        }
+
+        function updateStatusUI() {
+            const st = document.getElementById('status-text');
+            const box = document.getElementById('ui-top-left');
+            
+            st.classList.remove('mode-cursed', 'mode-cleanse');
+            box.classList.remove('mode-cursed', 'mode-cleanse');
+
+            if(currentState === STATE.CURSED) {
+                st.innerText = "MALICE DETECTED";
+                st.classList.add('mode-cursed');
+                box.classList.add('mode-cursed');
+            } else if (currentState === STATE.CLEANSE) {
+                st.innerText = "DISPERSING EVIL";
+                st.classList.add('mode-cleanse');
+                box.classList.add('mode-cleanse');
+            } else {
+                st.innerText = "OBSERVING";
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.001;
+
+            // --- ANIMATION CONTROLLERS ---
+            // Faster recovery: 0.2 lerp factor instead of 0.05
+            const targetCleanse = (currentState === STATE.CLEANSE) ? 1.0 : 0.0;
+            const targetCurse = (currentState === STATE.CURSED) ? 1.0 : 0.0;
+            
+            cleanseFactor += (targetCleanse - cleanseFactor) * 0.2; 
+            curseFactor += (targetCurse - curseFactor) * 0.2;
+
+            // Random Glitch (Red Flash) logic
+            if (Math.random() > 0.99) randomGlitch = 1.0;
+            randomGlitch *= 0.9; // Decay
+
+            // --- ROTATION LOGIC ---
+            // 1. Hand Interaction
+            let lookX = targetRotation.x;
+            let lookY = targetRotation.y;
+
+            // 2. Idle Animation (Searching/Always Looking)
+            if (currentState === STATE.IDLE) {
+                // Perlin-ish movement using sin/cos
+                lookX += Math.sin(time * 0.5) * 0.3; 
+                lookY += Math.cos(time * 0.34) * 0.2;
+            }
+
+            eyeSystem.rotation.y += (lookX - eyeSystem.rotation.y) * 0.05;
+            eyeSystem.rotation.x += (lookY - eyeSystem.rotation.x) * 0.05;
+            
+            // Sky Parallax
+            skySystem.rotation.y = eyeSystem.rotation.y * 0.1;
+            skySystem.rotation.x = eyeSystem.rotation.x * 0.1;
+
+            // --- PARTICLE UPDATE ---
+            const positions = eyeSystem.geometry.attributes.position.array;
+            const colors = eyeSystem.geometry.attributes.color.array;
+
+            const pulse = Math.sin(time * 2); // Heartbeat
+
+            for(let i=0; i<EYE_PARTICLE_COUNT; i++) {
+                const idx = i*3;
+                let tx = eyeBasePos[idx];
+                let ty = eyeBasePos[idx+1];
+                let tz = eyeBasePos[idx+2];
+                
+                // Get Radius for region checks
+                const r = Math.sqrt(tx*tx + ty*ty);
+
+                // A. IDLE BREATHING
+                // Subtle pulsation when idle
+                const breath = (1 + Math.sin(time * 1.5 + r*0.1) * 0.02);
+                tx *= breath; ty *= breath; tz *= breath;
+
+                // B. CURSE (Pinch)
+                if(curseFactor > 0.01) {
+                    // Contraction
+                    const squeeze = 1.0 - (curseFactor * 0.2);
+                    tx *= squeeze; ty *= squeeze;
+                    // Jitter
+                    tx += (Math.random()-0.5) * curseFactor * 2;
+                    ty += (Math.random()-0.5) * curseFactor * 2;
+                }
+
+                // C. CLEANSE (Explosion)
+                if(cleanseFactor > 0.01) {
+                    // Move in Random Direction (Explosion)
+                    const blast = cleanseFactor * 100; // Power
+                    tx += eyeExplosionDir[idx] * blast;
+                    ty += eyeExplosionDir[idx+1] * blast;
+                    tz += eyeExplosionDir[idx+2] * blast;
+                }
+
+                // Update Position
+                positions[idx] += (tx - positions[idx]) * 0.3;
+                positions[idx+1] += (ty - positions[idx+1]) * 0.3;
+                positions[idx+2] += (tz - positions[idx+2]) * 0.3;
+
+                // D. COLOR LOGIC
+                let rVal = eyeBaseCol[idx];
+                let gVal = eyeBaseCol[idx+1];
+                let bVal = eyeBaseCol[idx+2];
+
+                // Red Pupil Logic (Curse OR Glitch)
+                // Only affect inner radius (r < 12)
+                const isPupil = r < 12;
+                let redMix = 0;
+
+                if (isPupil) {
+                    // Mix curse factor + random glitch
+                    redMix = Math.max(curseFactor, randomGlitch);
+                }
+
+                if (redMix > 0.01) {
+                    rVal = rVal * (1-redMix) + (1.0 * redMix);
+                    gVal = gVal * (1-redMix) + (0.0 * redMix); // Remove Green
+                    bVal = bVal * (1-redMix) + (0.0 * redMix); // Remove Blue
+                }
+                
+                // NOTE: We do NOT mix white for Cleanse anymore, preserving original colors.
+
+                colors[idx] = rVal; colors[idx+1] = gVal; colors[idx+2] = bVal;
+            }
+
+            eyeSystem.geometry.attributes.position.needsUpdate = true;
+            eyeSystem.geometry.attributes.color.needsUpdate = true;
+
+            // Update Sky Pulse
+            skySystem.material.opacity = 0.4 + Math.sin(time * 0.5) * 0.1;
+
+            updateWhispers(time);
+            renderer.render(scene, camera);
+        }
+
+        function updateWhispers(t) {
+            whispers.forEach(w => {
+                const time = t * w.speed + w.offset;
+                const x = Math.cos(time) * w.radius;
+                const z = Math.sin(time) * w.radius;
+                const y = Math.sin(time * w.yFreq) * w.yAmp;
+
+                const vec = new THREE.Vector3(x, y, z);
+                vec.applyEuler(eyeSystem.rotation);
+                vec.project(camera);
+
+                if(vec.z > 1) {
+                    w.el.style.opacity = 0; 
+                } else {
+                    const sx = (vec.x * .5 + .5) * window.innerWidth;
+                    const sy = (-(vec.y * .5) + .5) * window.innerHeight;
+                    w.el.style.transform = `translate(${sx}px, ${sy}px)`;
+                    
+                    let op = 0.6; 
+                    if(currentState === STATE.CURSED) op = 1.0; 
+                    if(cleanseFactor > 0.1) op = 0; 
+                    w.el.style.opacity = op;
+                }
+            });
+        }
+
+        // --- MEDIAPIPE ---
+        function onResults(results) {
+            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                if(currentState !== STATE.IDLE) {
+                    currentState = STATE.IDLE;
+                    updateStatusUI();
+                }
+                // Release control of rotation
+                targetRotation.x *= 0.9;
+                targetRotation.y *= 0.9;
+                return;
+            }
+
+            let isPinching = false;
+            let isOpen = false;
+            let avgX = 0, avgY = 0;
+
+            results.multiHandLandmarks.forEach((landmarks) => {
+                const handX = (landmarks[9].x - 0.5) * -2; 
+                const handY = (landmarks[9].y - 0.5) * -2;
+                avgX += handX; avgY += handY;
+
+                const pinchDist = Math.hypot(landmarks[8].x - landmarks[4].x, landmarks[8].y - landmarks[4].y);
+                
+                if (pinchDist > 0.12) isOpen = true; 
+                else if (pinchDist < 0.05) isPinching = true;
+            });
+
+            avgX /= results.multiHandLandmarks.length;
+            avgY /= results.multiHandLandmarks.length;
+
+            targetRotation.x = avgX * 1.5; 
+            targetRotation.y = avgY * 0.8;
+
+            let newState = currentState;
+            if (isOpen) newState = STATE.CLEANSE;
+            else if (isPinching) newState = STATE.CURSED;
+            else newState = STATE.IDLE;
+
+            if(newState !== currentState) {
+                currentState = newState;
+                updateStatusUI();
+                if(newState === STATE.CLEANSE) log("ENERGY_BURST_INITIATED");
+                if(newState === STATE.CURSED) log("MALICIOUS_INTENT_DETECTED");
+            }
+        }
+
+        const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        hands.onResults(onResults);
+
+        const cameraFeed = new Camera(document.getElementById('input_video'), {
+            onFrame: async () => { await hands.send({image: document.getElementById('input_video')}); },
+            width: 640, height: 480
+        });
+        cameraFeed.start();
+
+        init();
+    </script>
+</body>
+</html>
