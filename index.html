@@ -1,10 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Matiasma CCTV - Ritual Final v2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Matiasma CCTV - Ritual Final v4</title>
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         :root { 
             --neon-blue: #00f2ff; 
@@ -15,7 +16,6 @@
         }
         body { margin: 0; overflow: hidden; background: var(--void); font-family: 'Special Elite', cursive; }
         
-        /* CINESCOPE OVERLAY */
         #cctv-overlay { 
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
             background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.1) 50%), 
@@ -24,7 +24,6 @@
             pointer-events: none; z-index: 100; opacity: 0.6; 
         }
 
-        /* HUD ELEMENTS */
         .hud-panel {
             position: absolute; z-index: 110; 
             background: rgba(0, 5, 10, 0.75); 
@@ -33,42 +32,47 @@
             padding: 15px;
             box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
             backdrop-filter: blur(4px);
-            transition: border-color 0.3s, color 0.3s;
+            transition: all 0.3s;
         }
 
         #ui-top-left { top: 20px; left: 20px; width: 220px; }
         #ui-bottom-left { bottom: 20px; left: 20px; width: 300px; height: 120px; display: flex; flex-direction: column-reverse; overflow: hidden; font-size: 11px; border-top: 2px solid var(--neon-blue); }
         #ui-bottom-right { bottom: 20px; right: 20px; width: 250px; text-align: left; }
 
+        @media (max-width: 768px) {
+            #ui-top-left { top: 10px; left: 10px; width: auto; right: 10px; display: flex; justify-content: space-between; align-items: center; }
+            #ui-bottom-right { bottom: 10px; right: 10px; left: 10px; width: auto; font-size: 0.9em; }
+            #ui-bottom-left { display: none; }
+        }
+
         .label { font-size: 10px; letter-spacing: 2px; opacity: 0.7; margin-bottom: 5px; }
         .big-text { font-size: 18px; font-weight: bold; }
         
         .instruction-row { display: flex; align-items: center; margin-bottom: 8px; color: #fff; }
-        .icon { width: 24px; height: 24px; margin-right: 10px; fill: var(--neon-blue); }
+        .material-icons { font-size: 24px; margin-right: 10px; color: var(--neon-blue); transition: color 0.3s; }
         .instruction-text { font-size: 13px; line-height: 1.2; }
         
         .log-entry { margin-top: 2px; opacity: 0.8; }
         .log-entry::before { content: "> "; color: var(--gold); }
 
-        /* FLOATING WHISPERS */
         .whisper { 
-            position: absolute; font-size: 14px; color: var(--alert); 
+            position: absolute; font-size: 14px; 
             pointer-events: none; z-index: 50; 
             font-weight: bold; text-transform: uppercase; 
             white-space: nowrap;
-            /* Removed glow/shadow for clarity */
-            text-shadow: none; 
-            opacity: 0; /* Start hidden */
+            opacity: 0;
+            will-change: transform, opacity, color;
         }
 
         #input_video { display: none; }
         
-        /* STATE CLASSES */
         .mode-cursed { color: var(--alert) !important; border-color: var(--alert) !important; }
-        .mode-cursed .icon { fill: var(--alert) !important; }
+        .mode-cursed .material-icons { color: var(--alert) !important; }
         
         .mode-cleanse { color: var(--white) !important; border-color: var(--white) !important; }
-        .mode-cleanse .icon { fill: var(--white) !important; }
+        .mode-cleanse .material-icons { color: var(--white) !important; }
+
+        .mode-mirror { color: var(--neon-blue) !important; border-color: var(--neon-blue) !important; box-shadow: inset 0 0 20px var(--neon-blue); }
     </style>
 </head>
 <body>
@@ -84,15 +88,18 @@
         <div class="label">RITUAL PROTOCOLS</div>
         
         <div class="instruction-row">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M13,6H11V11H6V13H11V18H13V13H18V11H13V6Z" /></svg> <div class="instruction-text">OPEN PALM (MOUTZA)<br>TO DISPERSE</div>
+            <span class="material-icons">pan_tool</span>
+            <div class="instruction-text">SPREAD FINGERS (MOUTZA)<br>TO DISPERSE</div>
         </div>
 
         <div class="instruction-row">
-             <svg class="icon" viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8A4,4 0 0,0 8,12Z" /></svg> <div class="instruction-text">PINCH FINGERS<br>TO CURSE</div>
+             <span class="material-icons">back_hand</span>
+            <div class="instruction-text">FINGERS CONNECTED<br>TO MIRROR (KATHEFTAKI)</div>
         </div>
 
         <div class="instruction-row">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12,2C17.5,2 22,6.5 22,12C22,17.5 17.5,22 12,22C6.5,22 2,17.5 2,12C2,6.5 6.5,2 12,2M12,4C7.58,4 4,7.58 4,12C4,16.42 7.58,20 12,20C16.42,20 20,16.42 20,12C20,7.58 16.42,4 12,4M11,7H13V15H11V7M11,17H13V19H11V17Z" /></svg> <div class="instruction-text">MOVE HAND<br>TO ROTATE</div>
+             <span class="material-icons">pinch</span>
+            <div class="instruction-text">PINCH FINGERS<br>TO CURSE</div>
         </div>
     </div>
 
@@ -110,34 +117,27 @@
         // --- CONFIG ---
         const EYE_PARTICLE_COUNT = 40000;
         const SKY_PARTICLE_COUNT = 1500;
+        // 1. UPDATED CURSE WORDS
         const CURSE_WORDS = ["WOW, SO LUCKY AGAIN, FTOU FTOU", "LOOKING AMAZING TODAY, FTOU FTOU", "EVERYTHING FALLS INTO PLACE FOR YOU, FTOU FTOU", "ALWAYS WINNING, HUH? FTOU FTOU", "SO FORTUNATE, REALLY, FTOU FTOU", "LIVING THE DREAM, EH? FTOU FTOU", "YOU'RE GLOWING, CAREFUL NOW, FTOU FTOU", "NICE ONE, AS ALWAYS, FTOU FTOU", "MUST BE GREAT, FTOU FTOU", "HOW PERFECT FOR YOU, FTOU FTOU", "ADORABLE SUCCESS, FTOU FTOU", "YOU'RE UNSTOPPABLE, FTOU FTOU FTOU"];
-        const STATE = { IDLE: 0, CURSED: 1, CLEANSE: 2 };
+        const STATE = { IDLE: 0, CURSED: 1, CLEANSE: 2, MIRROR: 3 };
         
-        // --- GLOBALS ---
         let scene, camera, renderer;
-        let eyeSystem, skySystem;
-        let eyePos, eyeCol, eyeBasePos, eyeBaseCol, eyeExplosionDir; 
+        let eyeSystem, skySystem, barrierMesh;
+        let eyePos, eyeCol, eyeBasePos, eyeBaseCol, eyeExplosionDir; // Added Explosion Dir
         let currentState = STATE.IDLE;
-        let whispers = []; // Array of {el, x, y, z, velocity}
-        
-        // --- ANIMATION VARS ---
+        let whispers = []; 
         let targetRotation = { x: 0, y: 0 }; 
-        let curseFactor = 0; 
-        let cleanseFactor = 0;
-        let randomGlitch = 0; 
+        let handScreenPos = { x: 0, y: 0 }; 
+        
+        let curseFactor = 0, cleanseFactor = 0, mirrorFactor = 0, randomGlitch = 0; 
 
         function log(msg) {
             const container = document.getElementById('ui-bottom-left');
-            const d = document.createElement('div');
-            d.className = 'log-entry';
-            d.innerText = msg;
+            const d = document.createElement('div'); d.className = 'log-entry'; d.innerText = msg;
             container.prepend(d);
             if(container.children.length > 6) container.removeChild(container.lastChild);
         }
 
-        // --- ICONS UPDATE ---
-        // Helper to update SVG paths if needed, or just rely on CSS fill change
-        
         function getGlowSprite() {
             const canvas = document.createElement('canvas');
             canvas.width = 32; canvas.height = 32;
@@ -166,7 +166,8 @@
 
             createSky();
             createEye();
-            initWhispers(); // Setup container
+            createBarrier(); 
+            initWhispers(); 
             animate();
             log("SYSTEM_ONLINE: WAITING_FOR_INPUT");
             
@@ -175,6 +176,21 @@
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
+        }
+
+        function createBarrier() {
+            // 3. MORE DRAMATIC MIRROR (Subdivision 2 for hex feel)
+            const geo = new THREE.IcosahedronGeometry(70, 2);
+            const mat = new THREE.MeshBasicMaterial({ 
+                color: 0x00f2ff, 
+                wireframe: true,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending // Glow effect
+            });
+            barrierMesh = new THREE.Mesh(geo, mat);
+            barrierMesh.visible = false;
+            scene.add(barrierMesh);
         }
 
         function createSky() {
@@ -186,7 +202,6 @@
                 pos.push((Math.random()-0.5) * 600 - 200); 
             }
             geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-            
             const mat = new THREE.PointsMaterial({
                 size: 4, map: getGlowSprite(), transparent: true, opacity: 0.4,
                 color: 0xaaccff, blending: THREE.AdditiveBlending, depthWrite: false
@@ -199,7 +214,7 @@
             const geo = new THREE.BufferGeometry();
             eyePos = new Float32Array(EYE_PARTICLE_COUNT * 3);
             eyeBasePos = new Float32Array(EYE_PARTICLE_COUNT * 3);
-            eyeExplosionDir = new Float32Array(EYE_PARTICLE_COUNT * 3);
+            eyeExplosionDir = new Float32Array(EYE_PARTICLE_COUNT * 3); // 4. RESTORED EXPLOSION VECTORS
             eyeCol = new Float32Array(EYE_PARTICLE_COUNT * 3);
             eyeBaseCol = new Float32Array(EYE_PARTICLE_COUNT * 3);
 
@@ -217,9 +232,11 @@
                 let x = r * Math.cos(theta);
                 let y = r * Math.sin(theta);
 
-                eyePos[idx] = x; eyePos[idx+1] = y; eyePos[idx+2] = z;
-                eyeBasePos[idx] = x; eyeBasePos[idx+1] = y; eyeBasePos[idx+2] = z;
+                eyePos[idx] = eyeBasePos[idx] = x;
+                eyePos[idx+1] = eyeBasePos[idx+1] = y;
+                eyePos[idx+2] = eyeBasePos[idx+2] = z;
 
+                // Precompute explosion direction (Spherical)
                 let exPhi = Math.acos(2 * Math.random() - 1);
                 let exTheta = Math.random() * 2 * Math.PI;
                 eyeExplosionDir[idx] = Math.sin(exPhi) * Math.cos(exTheta);
@@ -240,8 +257,9 @@
                 }
                 c.offsetHSL(0, 0, (Math.random()-0.5)*0.1);
 
-                eyeCol[idx] = c.r; eyeCol[idx+1] = c.g; eyeCol[idx+2] = c.b;
-                eyeBaseCol[idx] = c.r; eyeBaseCol[idx+1] = c.g; eyeBaseCol[idx+2] = c.b;
+                eyeCol[idx] = eyeBaseCol[idx] = c.r;
+                eyeCol[idx+1] = eyeBaseCol[idx+1] = c.g;
+                eyeCol[idx+2] = eyeBaseCol[idx+2] = c.b;
             }
 
             geo.setAttribute('position', new THREE.BufferAttribute(eyePos, 3));
@@ -254,88 +272,58 @@
             scene.add(eyeSystem);
         }
 
-        // --- TEXT EMISSION LOGIC ---
         function initWhispers() {
-            // Pre-create DOM elements but keep them inactive
             const container = document.getElementById('text-container');
-            for(let i=0; i<20; i++) {
+            for(let i=0; i<15; i++) {
                 const el = document.createElement('div');
                 el.className = 'whisper';
-                el.innerText = CURSE_WORDS[Math.floor(Math.random() * CURSE_WORDS.length)];
                 container.appendChild(el);
-                
-                // State: inactive (-1) or active timestamp
-                whispers.push({
-                    el: el,
-                    active: false,
-                    pos: new THREE.Vector3(),
-                    dir: new THREE.Vector3()
-                });
+                whispers.push({ el: el, active: false, pos: new THREE.Vector3(), dir: new THREE.Vector3(), spawnTime: 0 });
             }
         }
 
-        function spawnWhisper() {
-            // Find an inactive whisper
+        function spawnWhisper(time) {
             const w = whispers.find(x => !x.active);
             if(!w) return;
-
-            // Reset to Center (Pupil)
             w.active = true;
+            w.spawnTime = time;
             w.pos.set(0, 0, 0); 
-            
-            // Random Direction outwards (towards camera + spread)
-            w.dir.set(
-                (Math.random()-0.5) * 1, // X Spread
-                (Math.random()-0.5) * 0.5, // Y Spread
-                0.5 + Math.random() * 0.5  // Z Speed (Forward)
-            ).normalize();
-            
-            // Random Word
+            w.dir.set((Math.random()-0.5)*1.5, (Math.random()-0.5)*0.5, 1.0).normalize();
             w.el.innerText = CURSE_WORDS[Math.floor(Math.random() * CURSE_WORDS.length)];
+            w.el.style.color = "var(--neon-blue)"; 
         }
 
-        function updateWhispers(dt) {
-            // Spawn new ones periodically if Cursed or Idle
-            // If Cleansing, don't spawn
-            if (currentState !== STATE.CLEANSE && Math.random() < 0.03) {
-                spawnWhisper();
-            }
+        function updateWhispers(dt, time) {
+            if (currentState !== STATE.CLEANSE && currentState !== STATE.MIRROR && Math.random() < 0.03) spawnWhisper(time);
 
             whispers.forEach(w => {
                 if(!w.active) return;
-
-                // Move
-                const speed = 10 * dt; // Units per second
-                w.pos.addScaledVector(w.dir, speed);
-
-                // Project
-                // We need to apply the EYE rotation to the position so they seem to come from the object
-                const worldPos = w.pos.clone().applyEuler(eyeSystem.rotation);
+                const dist = w.pos.length();
                 
+                // 2. SLOWER SPEED (Reduced from 30 to 8)
+                w.pos.addScaledVector(w.dir, 8 * dt); 
+
+                const worldPos = w.pos.clone().applyEuler(eyeSystem.rotation);
                 worldPos.project(camera);
 
-                // Visibility check
-                // If behind camera or too far, reset
-                const dist = w.pos.length();
-                if(worldPos.z > 1 || dist > 150) {
-                    w.active = false;
-                    w.el.style.opacity = 0;
-                    return;
-                }
+                if(worldPos.z > 1 || dist > 150) { w.active = false; w.el.style.opacity = 0; return; }
 
-                // Screen Coords
+                // 2. GIANT TEXT SCALING (Max scale 3 instead of 1)
+                const scale = Math.min(3, (dist / 100) * 3);
+
+                const colorMix = Math.min(1, dist / 80);
+                const r = Math.floor(0 + (255 * colorMix));
+                const g = Math.floor(242 * (1 - colorMix));
+                const b = Math.floor(255 * (1 - colorMix));
+                w.el.style.color = `rgb(${r},${g},${b})`;
+
                 const sx = (worldPos.x * .5 + .5) * window.innerWidth;
                 const sy = (-(worldPos.y * .5) + .5) * window.innerHeight;
-                w.el.style.transform = `translate(${sx}px, ${sy}px)`;
                 
-                // Opacity Logic
-                // Fade in near center, fade out near edge
-                let op = Math.min(1, dist / 20); // Fade in
-                if (dist > 100) op *= (1 - (dist-100)/50); // Fade out
-
-                // If Cleansing, hide rapidly
-                if (cleanseFactor > 0.1) op = 0;
-
+                w.el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%) scale(${scale})`;
+                
+                let op = dist < 20 ? dist/20 : 1;
+                if(cleanseFactor > 0.1 || mirrorFactor > 0.1) op = 0;
                 w.el.style.opacity = op;
             });
         }
@@ -343,22 +331,28 @@
         function updateStatusUI() {
             const st = document.getElementById('status-text');
             const box = document.getElementById('ui-top-left');
-            const icons = document.querySelectorAll('.icon');
+            const icons = document.querySelectorAll('.material-icons');
             
-            st.classList.remove('mode-cursed', 'mode-cleanse');
-            box.classList.remove('mode-cursed', 'mode-cleanse');
-            icons.forEach(i => i.style.fill = 'var(--neon-blue)'); // Reset
+            st.className = 'big-text'; 
+            box.className = 'hud-panel'; 
+            icons.forEach(i => { i.style.color = 'var(--neon-blue)'; i.style.textShadow = 'none'; });
 
             if(currentState === STATE.CURSED) {
                 st.innerText = "MALICE DETECTED";
                 st.classList.add('mode-cursed');
                 box.classList.add('mode-cursed');
-                icons.forEach(i => i.style.fill = 'var(--alert)');
+                icons[2].style.color = 'var(--alert)';
             } else if (currentState === STATE.CLEANSE) {
                 st.innerText = "DISPERSING EVIL";
                 st.classList.add('mode-cleanse');
                 box.classList.add('mode-cleanse');
-                icons.forEach(i => i.style.fill = 'var(--white)');
+                icons[0].style.color = 'var(--white)';
+                icons[0].style.textShadow = '0 0 10px white';
+            } else if (currentState === STATE.MIRROR) {
+                st.innerText = "BARRIER ACTIVE";
+                st.classList.add('mode-mirror');
+                box.classList.add('mode-mirror');
+                icons[1].style.color = '#00f2ff';
             } else {
                 st.innerText = "OBSERVING";
             }
@@ -367,22 +361,21 @@
         function animate() {
             requestAnimationFrame(animate);
             const time = Date.now() * 0.001;
-            const dt = 0.016; // Approx delta
+            const dt = 0.016; 
 
-            // --- ANIMATION CONTROLLERS ---
             const targetCleanse = (currentState === STATE.CLEANSE) ? 1.0 : 0.0;
             const targetCurse = (currentState === STATE.CURSED) ? 1.0 : 0.0;
+            const targetMirror = (currentState === STATE.MIRROR) ? 1.0 : 0.0;
             
-            cleanseFactor += (targetCleanse - cleanseFactor) * 0.2; 
+            cleanseFactor += (targetCleanse - cleanseFactor) * 0.1; 
             curseFactor += (targetCurse - curseFactor) * 0.2;
+            mirrorFactor += (targetMirror - mirrorFactor) * 0.1;
 
             if (Math.random() > 0.99) randomGlitch = 1.0;
             randomGlitch *= 0.9; 
 
-            // --- ROTATION LOGIC ---
             let lookX = targetRotation.x;
             let lookY = targetRotation.y;
-
             if (currentState === STATE.IDLE) {
                 lookX += Math.sin(time * 0.5) * 0.3; 
                 lookY += Math.cos(time * 0.34) * 0.2;
@@ -391,10 +384,19 @@
             eyeSystem.rotation.y += (lookX - eyeSystem.rotation.y) * 0.05;
             eyeSystem.rotation.x += (lookY - eyeSystem.rotation.x) * 0.05;
             
+            barrierMesh.rotation.copy(eyeSystem.rotation);
             skySystem.rotation.y = eyeSystem.rotation.y * 0.1;
             skySystem.rotation.x = eyeSystem.rotation.x * 0.1;
 
-            // --- PARTICLE UPDATE ---
+            // 3. DRAMATIC MIRROR VISUALS
+            if(mirrorFactor > 0.01) {
+                barrierMesh.visible = true;
+                barrierMesh.material.opacity = mirrorFactor * 0.4 + (Math.sin(time*8)*0.1);
+                barrierMesh.scale.setScalar(1 + Math.sin(time*4)*0.05 * mirrorFactor);
+            } else {
+                barrierMesh.visible = false;
+            }
+
             const positions = eyeSystem.geometry.attributes.position.array;
             const colors = eyeSystem.geometry.attributes.color.array;
 
@@ -403,13 +405,12 @@
                 let tx = eyeBasePos[idx];
                 let ty = eyeBasePos[idx+1];
                 let tz = eyeBasePos[idx+2];
-                const r = Math.sqrt(tx*tx + ty*ty);
-
+                
                 // Idle Breath
+                const r = Math.sqrt(tx*tx + ty*ty);
                 const breath = (1 + Math.sin(time * 1.5 + r*0.1) * 0.02);
                 tx *= breath; ty *= breath; tz *= breath;
 
-                // Curse Pinch
                 if(curseFactor > 0.01) {
                     const squeeze = 1.0 - (curseFactor * 0.2);
                     tx *= squeeze; ty *= squeeze;
@@ -417,7 +418,7 @@
                     ty += (Math.random()-0.5) * curseFactor * 2;
                 }
 
-                // Cleanse Explosion
+                // 4. RESTORED CLEANSE EXPLOSION LOGIC
                 if(cleanseFactor > 0.01) {
                     const blast = cleanseFactor * 100; 
                     tx += eyeExplosionDir[idx] * blast;
@@ -451,11 +452,10 @@
             eyeSystem.geometry.attributes.color.needsUpdate = true;
             skySystem.material.opacity = 0.4 + Math.sin(time * 0.5) * 0.1;
 
-            updateWhispers(dt);
+            updateWhispers(dt, time);
             renderer.render(scene, camera);
         }
 
-        // --- MEDIAPIPE ---
         function onResults(results) {
             if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
                 if(currentState !== STATE.IDLE) {
@@ -467,8 +467,7 @@
                 return;
             }
 
-            let isPinching = false;
-            let isMoutza = false;
+            let isPinching = false, isMoutza = false, isMirror = false;
             let avgX = 0, avgY = 0;
 
             results.multiHandLandmarks.forEach((landmarks) => {
@@ -476,46 +475,43 @@
                 const handY = (landmarks[9].y - 0.5) * -2;
                 avgX += handX; avgY += handY;
 
-                // 1. Pinch Detection (Index Tip to Thumb Tip)
                 const pinchDist = Math.hypot(landmarks[8].x - landmarks[4].x, landmarks[8].y - landmarks[4].y);
-                
-                // 2. Moutza Detection (Spread Check)
-                // Distance between Index Tip (8) and Pinky Tip (20)
                 const spreadDist = Math.hypot(landmarks[8].x - landmarks[20].x, landmarks[8].y - landmarks[20].y);
-                
-                // Also check if fingers are extended (Tip y < PIP y usually means up, but rotation matters)
-                // Simplified: Just check wide spread + Thumb-Index distance
+                const neighborDist = Math.hypot(landmarks[8].x - landmarks[12].x, landmarks[8].y - landmarks[12].y);
                 const thumbIndexDist = Math.hypot(landmarks[4].x - landmarks[8].x, landmarks[4].y - landmarks[8].y);
 
-                // Conditions
-                if (spreadDist > 0.25 && thumbIndexDist > 0.15) {
-                    isMoutza = true; 
-                } else if (pinchDist < 0.05) {
-                    isPinching = true;
+                if (pinchDist < 0.05) isPinching = true;
+                else if (thumbIndexDist > 0.1) {
+                    if (spreadDist > 0.25) isMoutza = true;
+                    else if (spreadDist < 0.20 && neighborDist < 0.06) isMirror = true;
                 }
             });
 
             avgX /= results.multiHandLandmarks.length;
             avgY /= results.multiHandLandmarks.length;
 
+            handScreenPos.x = avgX;
+            handScreenPos.y = avgY;
             targetRotation.x = avgX * 1.5; 
             targetRotation.y = avgY * 0.8;
 
             let newState = currentState;
             if (isMoutza) newState = STATE.CLEANSE;
+            else if (isMirror) newState = STATE.MIRROR;
             else if (isPinching) newState = STATE.CURSED;
             else newState = STATE.IDLE;
 
             if(newState !== currentState) {
                 currentState = newState;
                 updateStatusUI();
-                if(newState === STATE.CLEANSE) log("MOUTZA_DETECTED: CLEANSE_INIT");
-                if(newState === STATE.CURSED) log("MALICIOUS_GESTURE_DETECTED");
+                if(newState === STATE.CLEANSE) log("MOUTZA DETECTED: DISPERSING");
+                if(newState === STATE.MIRROR) log("MIRROR PROTOCOL: BARRIER UP");
+                if(newState === STATE.CURSED) log("MALICIOUS GESTURE DETECTED");
             }
         }
 
         const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
         hands.onResults(onResults);
 
         const cameraFeed = new Camera(document.getElementById('input_video'), {
