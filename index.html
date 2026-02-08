@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Matiasma CCTV - Ritual Final v4</title>
+    <title>Matiasma CCTV</title>
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -61,7 +61,7 @@
             font-weight: bold; text-transform: uppercase; 
             white-space: nowrap;
             opacity: 0;
-            will-change: transform, opacity, color;
+            will-change: transform, opacity;
         }
 
         #input_video { display: none; }
@@ -72,7 +72,7 @@
         .mode-cleanse { color: var(--white) !important; border-color: var(--white) !important; box-shadow: inset 0 0 20px var(--white); }
         .mode-cleanse .material-icons { color: var(--white) !important; }
 
-        .mode-mirror { color: var(--white) !important; border-color: #008000 !important; box-shadow: inset 0 0 20px #008000; }
+        .mode-mirror { color: var(--white) !important; border-color: #00ff80 !important; box-shadow: inset 0 0 20px #00ff80; }
     </style>
 </head>
 <body>
@@ -103,7 +103,7 @@
         </div>
     </div>
 
-    <div id="ui-bottom-left" class="hud-panel" id="console-log"></div>
+    <div id="ui-bottom-left" class="hud-panel"></div>
     <div id="text-container"></div>
     <video id="input_video" playsinline></video>
 
@@ -117,17 +117,19 @@
         // --- CONFIG ---
         const EYE_PARTICLE_COUNT = 20000;
         const SKY_PARTICLE_COUNT = 1500;
-        // 1. UPDATED CURSE WORDS
         const CURSE_WORDS = ["WOW, SO LUCKY AGAIN, FTOU FTOU", "LOOKING AMAZING TODAY, FTOU FTOU", "EVERYTHING FALLS INTO PLACE FOR YOU, FTOU FTOU", "ALWAYS WINNING, HUH? FTOU FTOU", "SO FORTUNATE, REALLY, FTOU FTOU", "LIVING THE DREAM, EH? FTOU FTOU", "YOU'RE GLOWING, CAREFUL NOW, FTOU FTOU", "NICE ONE, AS ALWAYS, FTOU FTOU", "MUST BE GREAT, FTOU FTOU", "HOW PERFECT FOR YOU, FTOU FTOU", "ADORABLE SUCCESS, FTOU FTOU", "YOU'RE UNSTOPPABLE, FTOU FTOU FTOU"];
         const STATE = { IDLE: 0, CURSED: 1, CLEANSE: 2, MIRROR: 3 };
         
         let scene, camera, renderer;
-        let eyeSystem, skySystem, barrierMesh;
-        let eyePos, eyeCol, eyeBasePos, eyeBaseCol, eyeExplosionDir; // Added Explosion Dir
+        let eyeSystem, skySystem, barrierGroup, barrierSolid, barrierWire;
+        let eyePos, eyeCol, eyeBasePos, eyeBaseCol, eyeExplosionDir;
         let currentState = STATE.IDLE;
         let whispers = []; 
         let targetRotation = { x: 0, y: 0 }; 
-        let handScreenPos = { x: 0, y: 0 }; 
+        
+        // Performance: Scratch variables to avoid GC inside loops
+        const _v1 = new THREE.Vector3();
+        const _v2 = new THREE.Vector3();
         
         let curseFactor = 0, cleanseFactor = 0, mirrorFactor = 0, randomGlitch = 0; 
 
@@ -156,8 +158,9 @@
             scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x010105, 0.001); 
 
+            // 2. INCREASED DISTANCE
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-            camera.position.z = 100;
+            camera.position.z = 120; 
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -179,19 +182,33 @@
         }
 
         function createBarrier() {
-            // 3. MORE DRAMATIC MIRROR (Subdivision 2 for hex feel)
-            const geo = new THREE.IcosahedronGeometry(70, 3);
-            const mat = new THREE.MeshBasicMaterial({ 
-                color: 0x008000, 
-                wireframe: true,
-                transparent: true,
-                opacity: 0.8,
-                blending: THREE.AdditiveBlending, // Glow effect
-                side: THREE.DoubleSide
+            // 3. OPAQUE + WIREFRAME BARRIER
+            barrierGroup = new THREE.Group();
+            const geo = new THREE.IcosahedronGeometry(75, 3);
+            
+            // Solid Layer
+            const matSolid = new THREE.MeshBasicMaterial({ 
+                color: 0x004422, 
+                transparent: true, 
+                opacity: 0, 
+                side: THREE.DoubleSide 
             });
-            barrierMesh = new THREE.Mesh(geo, mat);
-            barrierMesh.visible = false;
-            scene.add(barrierMesh);
+            barrierSolid = new THREE.Mesh(geo, matSolid);
+
+            // Wireframe Layer
+            const matWire = new THREE.MeshBasicMaterial({ 
+                color: 0x00ff80, 
+                wireframe: true, 
+                transparent: true, 
+                opacity: 0,
+                blending: THREE.AdditiveBlending
+            });
+            barrierWire = new THREE.Mesh(geo, matWire);
+
+            barrierGroup.add(barrierSolid);
+            barrierGroup.add(barrierWire);
+            barrierGroup.visible = false;
+            scene.add(barrierGroup);
         }
 
         function createSky() {
@@ -215,7 +232,7 @@
             const geo = new THREE.BufferGeometry();
             eyePos = new Float32Array(EYE_PARTICLE_COUNT * 3);
             eyeBasePos = new Float32Array(EYE_PARTICLE_COUNT * 3);
-            eyeExplosionDir = new Float32Array(EYE_PARTICLE_COUNT * 3); // 4. RESTORED EXPLOSION VECTORS
+            eyeExplosionDir = new Float32Array(EYE_PARTICLE_COUNT * 3); 
             eyeCol = new Float32Array(EYE_PARTICLE_COUNT * 3);
             eyeBaseCol = new Float32Array(EYE_PARTICLE_COUNT * 3);
 
@@ -237,7 +254,6 @@
                 eyePos[idx+1] = eyeBasePos[idx+1] = y;
                 eyePos[idx+2] = eyeBasePos[idx+2] = z;
 
-                // Precompute explosion direction (Spherical)
                 let exPhi = Math.acos(2 * Math.random() - 1);
                 let exTheta = Math.random() * 2 * Math.PI;
                 eyeExplosionDir[idx] = Math.sin(exPhi) * Math.cos(exTheta);
@@ -256,8 +272,6 @@
                     c.lerpColors(cWhite, cDeepBlue, (r-42)/8);
                     if(r > 48) c.copy(cDeepBlue);
                 }
-                c.offsetHSL(0, 0, (Math.random()-0.5)*0.1);
-
                 eyeCol[idx] = eyeBaseCol[idx] = c.r;
                 eyeCol[idx+1] = eyeBaseCol[idx+1] = c.g;
                 eyeCol[idx+2] = eyeBaseCol[idx+2] = c.b;
@@ -279,7 +293,7 @@
                 const el = document.createElement('div');
                 el.className = 'whisper';
                 container.appendChild(el);
-                whispers.push({ el: el, active: false, pos: new THREE.Vector3(), dir: new THREE.Vector3(), spawnTime: 0 });
+                whispers.push({ el: el, active: false, pos: new THREE.Vector3(), dir: new THREE.Vector3() });
             }
         }
 
@@ -287,11 +301,9 @@
             const w = whispers.find(x => !x.active);
             if(!w) return;
             w.active = true;
-            w.spawnTime = time;
             w.pos.set(0, 0, 0); 
             w.dir.set((Math.random()-0.5)*1.5, (Math.random()-0.5)*0.5, 1.0).normalize();
             w.el.innerText = CURSE_WORDS[Math.floor(Math.random() * CURSE_WORDS.length)];
-            w.el.style.color = "var(--neon-blue)"; 
         }
 
         function updateWhispers(dt, time) {
@@ -299,33 +311,26 @@
 
             whispers.forEach(w => {
                 if(!w.active) return;
-                const dist = w.pos.length();
+                w.pos.addScaledVector(w.dir, 12 * dt); 
                 
-                // 2. SLOWER SPEED (Reduced from 30 to 8)
-                w.pos.addScaledVector(w.dir, 8 * dt); 
+                // 4. PERFORMANCE: Optimized whisper positioning
+                _v1.copy(w.pos).applyEuler(eyeSystem.rotation).project(camera);
+                const dist = w.pos.length();
 
-                const worldPos = w.pos.clone().applyEuler(eyeSystem.rotation);
-                worldPos.project(camera);
+                if(_v1.z > 1 || dist > 180) { w.active = false; w.el.style.opacity = 0; return; }
 
-                if(worldPos.z > 1 || dist > 150) { w.active = false; w.el.style.opacity = 0; return; }
-
-                // 2. GIANT TEXT SCALING (Max scale 3 instead of 1)
-                const scale = Math.min(3, (dist / 100) * 3);
-
+                const scale = Math.min(2.5, (dist / 100) * 3);
                 const colorMix = Math.min(1, dist / 80);
                 const r = Math.floor(0 + (255 * colorMix));
                 const g = Math.floor(242 * (1 - colorMix));
                 const b = Math.floor(255 * (1 - colorMix));
-                w.el.style.color = `rgb(${r},${g},${b})`;
 
-                const sx = (worldPos.x * .5 + .5) * window.innerWidth;
-                const sy = (-(worldPos.y * .5) + .5) * window.innerHeight;
+                const sx = (_v1.x * .5 + .5) * window.innerWidth;
+                const sy = (-(_v1.y * .5) + .5) * window.innerHeight;
                 
+                w.el.style.color = `rgb(${r},${g},${b})`;
                 w.el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%) scale(${scale})`;
-                
-                let op = dist < 20 ? dist/20 : 1;
-                if(cleanseFactor > 0.1 || mirrorFactor > 0.1) op = 0;
-                w.el.style.opacity = op;
+                w.el.style.opacity = (cleanseFactor > 0.1 || mirrorFactor > 0.1) ? 0 : (dist < 20 ? dist/20 : 1);
             });
         }
 
@@ -343,20 +348,16 @@
                 st.classList.add('mode-cursed');
                 box.classList.add('mode-cursed');
                 icons[2].style.color = 'var(--alert)';
-                icons[2].style.textShadow = '0 0 10px var(--alert)';
-              
             } else if (currentState === STATE.CLEANSE) {
                 st.innerText = "DISPERSING EVIL";
                 st.classList.add('mode-cleanse');
                 box.classList.add('mode-cleanse');
                 icons[0].style.color = 'var(--white)';
-                icons[0].style.textShadow = '0 0 10px white';
             } else if (currentState === STATE.MIRROR) {
                 st.innerText = "BARRIER ACTIVE";
                 st.classList.add('mode-mirror');
                 box.classList.add('mode-mirror');
-                icons[1].style.color = '#008000';
-                icons[1].style.textShadow = '0 0 10px #008000';
+                icons[1].style.color = '#00ff80';
             } else {
                 st.innerText = "OBSERVING";
             }
@@ -367,39 +368,24 @@
             const time = Date.now() * 0.001;
             const dt = 0.016; 
 
-            const targetCleanse = (currentState === STATE.CLEANSE) ? 1.0 : 0.0;
-            const targetCurse = (currentState === STATE.CURSED) ? 1.0 : 0.0;
-            const targetMirror = (currentState === STATE.MIRROR) ? 1.0 : 0.0;
-            
-            cleanseFactor += (targetCleanse - cleanseFactor) * 0.1; 
-            curseFactor += (targetCurse - curseFactor) * 0.2;
-            mirrorFactor += (targetMirror - mirrorFactor) * 0.1;
+            cleanseFactor += ((currentState === STATE.CLEANSE ? 1 : 0) - cleanseFactor) * 0.1; 
+            curseFactor += ((currentState === STATE.CURSED ? 1 : 0) - curseFactor) * 0.15;
+            mirrorFactor += ((currentState === STATE.MIRROR ? 1 : 0) - mirrorFactor) * 0.1;
 
             if (Math.random() > 0.99) randomGlitch = 1.0;
             randomGlitch *= 0.9; 
 
-            let lookX = targetRotation.x;
-            let lookY = targetRotation.y;
-            if (currentState === STATE.IDLE) {
-                lookX += Math.sin(time * 0.5) * 0.3; 
-                lookY += Math.cos(time * 0.34) * 0.2;
-            }
+            eyeSystem.rotation.y += (targetRotation.x - eyeSystem.rotation.y) * 0.05;
+            eyeSystem.rotation.x += (targetRotation.y - eyeSystem.rotation.x) * 0.05;
+            barrierGroup.rotation.copy(eyeSystem.rotation);
 
-            eyeSystem.rotation.y += (lookX - eyeSystem.rotation.y) * 0.05;
-            eyeSystem.rotation.x += (lookY - eyeSystem.rotation.x) * 0.05;
-            
-            barrierMesh.rotation.copy(eyeSystem.rotation);
-            skySystem.rotation.y = eyeSystem.rotation.y * 0.1;
-            skySystem.rotation.x = eyeSystem.rotation.x * 0.1;
-
-            // 3. DRAMATIC MIRROR VISUALS
+            // 3. BARRIER VISUALS (Opaque + Wireframe)
             if(mirrorFactor > 0.01) {
-                barrierMesh.visible = true;
-                barrierMesh.material.opacity = mirrorFactor * 0.4 + (Math.sin(time*8)*0.1);
-                barrierMesh.scale.setScalar(1 + Math.sin(time*4)*0.05 * mirrorFactor);
-            } else {
-                barrierMesh.visible = false;
-            }
+                barrierGroup.visible = true;
+                barrierSolid.material.opacity = mirrorFactor * 0.3;
+                barrierWire.material.opacity = mirrorFactor * 0.8 + (Math.sin(time*10)*0.2);
+                barrierGroup.scale.setScalar(1 + Math.sin(time*4)*0.02 * mirrorFactor);
+            } else { barrierGroup.visible = false; }
 
             const positions = eyeSystem.geometry.attributes.position.array;
             const colors = eyeSystem.geometry.attributes.color.array;
@@ -409,113 +395,79 @@
                 let tx = eyeBasePos[idx];
                 let ty = eyeBasePos[idx+1];
                 let tz = eyeBasePos[idx+2];
-                
-                // Idle Breath
                 const r = Math.sqrt(tx*tx + ty*ty);
+
+                // Idle Breath
                 const breath = (1 + Math.sin(time * 1.5 + r*0.1) * 0.02);
                 tx *= breath; ty *= breath; tz *= breath;
 
+                // 1. CURSE PULSE (WAVE)
                 if(curseFactor > 0.01) {
-                    const squeeze = 1.0 - (curseFactor * 0.2);
-                    tx *= squeeze; ty *= squeeze;
-                    tx += (Math.random()-0.5) * curseFactor * 2;
-                    ty += (Math.random()-0.5) * curseFactor * 2;
+                    // radial wave: frequency 0.4, speed 12
+                    const wave = Math.sin(r * 0.4 - time * 12) * 2.5 * curseFactor;
+                    const angle = Math.atan2(ty, tx);
+                    tx += Math.cos(angle) * wave;
+                    ty += Math.sin(angle) * wave;
                 }
 
-                // 4. RESTORED CLEANSE EXPLOSION LOGIC
                 if(cleanseFactor > 0.01) {
-                    const blast = cleanseFactor * 100; 
+                    const blast = cleanseFactor * 120; 
                     tx += eyeExplosionDir[idx] * blast;
                     ty += eyeExplosionDir[idx+1] * blast;
                     tz += eyeExplosionDir[idx+2] * blast;
                 }
 
-                positions[idx] += (tx - positions[idx]) * 0.3;
-                positions[idx+1] += (ty - positions[idx+1]) * 0.3;
-                positions[idx+2] += (tz - positions[idx+2]) * 0.3;
+                positions[idx] += (tx - positions[idx]) * 0.25;
+                positions[idx+1] += (ty - positions[idx+1]) * 0.25;
+                positions[idx+2] += (tz - positions[idx+2]) * 0.25;
 
-                // Colors
-                let rVal = eyeBaseCol[idx];
-                let gVal = eyeBaseCol[idx+1];
-                let bVal = eyeBaseCol[idx+2];
-
-                const isPupil = r < 12;
-                let redMix = 0;
-                if (isPupil) redMix = Math.max(curseFactor, randomGlitch);
-
+                // Color Modulation
+                let rVal = eyeBaseCol[idx], gVal = eyeBaseCol[idx+1], bVal = eyeBaseCol[idx+2];
+                const redMix = Math.max(curseFactor * (r < 15 ? 1 : 0), randomGlitch * (r < 12 ? 1 : 0));
                 if (redMix > 0.01) {
-                    rVal = rVal * (1-redMix) + (1.0 * redMix);
-                    gVal = gVal * (1-redMix);
-                    bVal = bVal * (1-redMix);
+                    rVal = rVal * (1-redMix) + redMix;
+                    gVal *= (1-redMix); bVal *= (1-redMix);
                 }
-                
                 colors[idx] = rVal; colors[idx+1] = gVal; colors[idx+2] = bVal;
             }
 
             eyeSystem.geometry.attributes.position.needsUpdate = true;
             eyeSystem.geometry.attributes.color.needsUpdate = true;
-            skySystem.material.opacity = 0.4 + Math.sin(time * 0.5) * 0.1;
-
             updateWhispers(dt, time);
             renderer.render(scene, camera);
         }
 
         function onResults(results) {
             if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-                if(currentState !== STATE.IDLE) {
-                    currentState = STATE.IDLE;
-                    updateStatusUI();
-                }
-                targetRotation.x *= 0.9;
-                targetRotation.y *= 0.9;
+                if(currentState !== STATE.IDLE) { currentState = STATE.IDLE; updateStatusUI(); }
+                targetRotation.x *= 0.9; targetRotation.y *= 0.9;
                 return;
             }
 
-            let isPinching = false, isMoutza = false, isMirror = false;
-            let avgX = 0, avgY = 0;
+            const landmarks = results.multiHandLandmarks[0];
+            targetRotation.x = (landmarks[9].x - 0.5) * -3; 
+            targetRotation.y = (landmarks[9].y - 0.5) * -1.5;
 
-            results.multiHandLandmarks.forEach((landmarks) => {
-                const handX = (landmarks[9].x - 0.5) * -2; 
-                const handY = (landmarks[9].y - 0.5) * -2;
-                avgX += handX; avgY += handY;
+            const pinchDist = Math.hypot(landmarks[8].x - landmarks[4].x, landmarks[8].y - landmarks[4].y);
+            const spreadDist = Math.hypot(landmarks[8].x - landmarks[20].x, landmarks[8].y - landmarks[20].y);
+            const neighborDist = Math.hypot(landmarks[8].x - landmarks[12].x, landmarks[8].y - landmarks[12].y);
 
-                const pinchDist = Math.hypot(landmarks[8].x - landmarks[4].x, landmarks[8].y - landmarks[4].y);
-                const spreadDist = Math.hypot(landmarks[8].x - landmarks[20].x, landmarks[8].y - landmarks[20].y);
-                const neighborDist = Math.hypot(landmarks[8].x - landmarks[12].x, landmarks[8].y - landmarks[12].y);
-                const thumbIndexDist = Math.hypot(landmarks[4].x - landmarks[8].x, landmarks[4].y - landmarks[8].y);
-
-                if (pinchDist < 0.05) isPinching = true;
-                else if (thumbIndexDist > 0.1) {
-                    if (spreadDist > 0.25) isMoutza = true;
-                    else if (spreadDist < 0.20 && neighborDist < 0.06) isMirror = true;
-                }
-            });
-
-            avgX /= results.multiHandLandmarks.length;
-            avgY /= results.multiHandLandmarks.length;
-
-            handScreenPos.x = avgX;
-            handScreenPos.y = avgY;
-            targetRotation.x = avgX * 1.5; 
-            targetRotation.y = avgY * 0.8;
-
-            let newState = currentState;
-            if (isMoutza) newState = STATE.CLEANSE;
-            else if (isMirror) newState = STATE.MIRROR;
-            else if (isPinching) newState = STATE.CURSED;
-            else newState = STATE.IDLE;
+            let newState = STATE.IDLE;
+            if (pinchDist < 0.04) newState = STATE.CURSED;
+            else if (spreadDist > 0.25) newState = STATE.CLEANSE;
+            else if (spreadDist < 0.18 && neighborDist < 0.06) newState = STATE.MIRROR;
 
             if(newState !== currentState) {
                 currentState = newState;
                 updateStatusUI();
-                if(newState === STATE.CLEANSE) log("MOUTZA DETECTED: DISPERSING");
-                if(newState === STATE.MIRROR) log("MIRROR PROTOCOL: BARRIER UP");
-                if(newState === STATE.CURSED) log("MALICIOUS GESTURE DETECTED");
+                if(newState === STATE.CLEANSE) log("MOUTZA: DISPERSING");
+                if(newState === STATE.MIRROR) log("MIRROR: BARRIER UP");
+                if(newState === STATE.CURSED) log("MALICE DETECTED");
             }
         }
 
         const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-        hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
         hands.onResults(onResults);
 
         const cameraFeed = new Camera(document.getElementById('input_video'), {
@@ -523,7 +475,6 @@
             width: 640, height: 480
         });
         cameraFeed.start();
-
         init();
     </script>
 </body>
