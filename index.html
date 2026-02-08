@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mati</title>
+    <title>Matiasma CCTV - Ritual Final v4</title>
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -115,7 +115,7 @@
         import * as THREE from 'three';
 
         // --- CONFIG ---
-        const EYE_PARTICLE_COUNT = 40000;
+        const EYE_PARTICLE_COUNT = 20000;
         const SKY_PARTICLE_COUNT = 1500;
         // 1. UPDATED CURSE WORDS
         const CURSE_WORDS = ["WOW, SO LUCKY AGAIN, FTOU FTOU", "LOOKING AMAZING TODAY, FTOU FTOU", "EVERYTHING FALLS INTO PLACE FOR YOU, FTOU FTOU", "ALWAYS WINNING, HUH? FTOU FTOU", "SO FORTUNATE, REALLY, FTOU FTOU", "LIVING THE DREAM, EH? FTOU FTOU", "YOU'RE GLOWING, CAREFUL NOW, FTOU FTOU", "NICE ONE, AS ALWAYS, FTOU FTOU", "MUST BE GREAT, FTOU FTOU", "HOW PERFECT FOR YOU, FTOU FTOU", "ADORABLE SUCCESS, FTOU FTOU", "YOU'RE UNSTOPPABLE, FTOU FTOU FTOU"];
@@ -180,12 +180,12 @@
 
         function createBarrier() {
             // 3. MORE DRAMATIC MIRROR (Subdivision 2 for hex feel)
-            const geo = new THREE.IcosahedronGeometry(70, 2);
+            const geo = new THREE.IcosahedronGeometry(70, 3);
             const mat = new THREE.MeshBasicMaterial({ 
-                color: 0xFFC0CB, 
+                color: 0xFF00FF, 
                 wireframe: true,
                 transparent: true,
-                opacity: 0,
+                opacity: 0.8,
                 blending: THREE.AdditiveBlending // Glow effect
             });
             barrierMesh = new THREE.Mesh(geo, mat);
@@ -294,7 +294,7 @@
         }
 
         function updateWhispers(dt, time) {
-            if (currentState !== STATE.CLEANSE && currentState !== STATE.MIRROR && Math.random() < 0.03) spawnWhisper(time);
+            if (currentState !== STATE.CLEANSE && currentState !== STATE.MIRROR && Math.random() < 0.005) spawnWhisper(time);
 
             whispers.forEach(w => {
                 if(!w.active) return;
@@ -354,8 +354,8 @@
                 st.innerText = "BARRIER ACTIVE";
                 st.classList.add('mode-mirror');
                 box.classList.add('mode-mirror');
-                icons[1].style.color = '#FFC0CB';
-                icons[1].style.textShadow = '0 0 10px #FFC0CB';
+                icons[1].style.color = '#FF00FF';
+                icons[1].style.textShadow = '0 0 10px #FF00FF';
             } else {
                 st.innerText = "OBSERVING";
             }
