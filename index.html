@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Matiasma CCTV - Ritual Final v4</title>
+    <title>Mati</title>
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -182,7 +182,7 @@
             // 3. MORE DRAMATIC MIRROR (Subdivision 2 for hex feel)
             const geo = new THREE.IcosahedronGeometry(70, 2);
             const mat = new THREE.MeshBasicMaterial({ 
-                color: 0x00f2ff, 
+                color: 0xFFC0CB, 
                 wireframe: true,
                 transparent: true,
                 opacity: 0,
@@ -342,6 +342,8 @@
                 st.classList.add('mode-cursed');
                 box.classList.add('mode-cursed');
                 icons[2].style.color = 'var(--alert)';
+                icons[2].style.textShadow = '0 0 10px var(--alert)';
+              
             } else if (currentState === STATE.CLEANSE) {
                 st.innerText = "DISPERSING EVIL";
                 st.classList.add('mode-cleanse');
@@ -352,7 +354,8 @@
                 st.innerText = "BARRIER ACTIVE";
                 st.classList.add('mode-mirror');
                 box.classList.add('mode-mirror');
-                icons[1].style.color = '#00f2ff';
+                icons[1].style.color = '#FFC0CB';
+                icons[1].style.textShadow = '0 0 10px #FFC0CB';
             } else {
                 st.innerText = "OBSERVING";
             }
