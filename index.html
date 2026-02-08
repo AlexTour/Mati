@@ -66,13 +66,13 @@
 
         #input_video { display: none; }
         
-        .mode-cursed { color: var(--alert) !important; border-color: var(--alert) !important; }
-        .mode-cursed .material-icons { color: var(--alert) !important; }
+        .mode-cursed { color: var(--white) !important; border-color: var(--alert) !important; box-shadow: inset 0 0 20px var(--alert);}
+        .mode-cursed .material-icons { color: var(--alert) !important;  }
         
-        .mode-cleanse { color: var(--white) !important; border-color: var(--white) !important; }
+        .mode-cleanse { color: var(--white) !important; border-color: var(--white) !important; box-shadow: inset 0 0 20px var(--white); }
         .mode-cleanse .material-icons { color: var(--white) !important; }
 
-        .mode-mirror { color: var(--neon-blue) !important; border-color: var(--neon-blue) !important; box-shadow: inset 0 0 20px var(--neon-blue); }
+        .mode-mirror { color: var(--white) !important; border-color: #008000 !important; box-shadow: inset 0 0 20px #008000; }
     </style>
 </head>
 <body>
@@ -94,7 +94,7 @@
 
         <div class="instruction-row">
              <span class="material-icons">back_hand</span>
-            <div class="instruction-text">FINGERS CONNECTED<br>TO MIRROR (KATHEFTAKI)</div>
+            <div class="instruction-text">FINGERS CONNECTED<br>TO MIRROR (KATHREFTAKI)</div>
         </div>
 
         <div class="instruction-row">
@@ -182,7 +182,7 @@
             // 3. MORE DRAMATIC MIRROR (Subdivision 2 for hex feel)
             const geo = new THREE.IcosahedronGeometry(70, 3);
             const mat = new THREE.MeshBasicMaterial({ 
-                color: 0xFF00FF, 
+                color: 0x008000, 
                 wireframe: true,
                 transparent: true,
                 opacity: 0.8,
@@ -338,7 +338,7 @@
             icons.forEach(i => { i.style.color = 'var(--neon-blue)'; i.style.textShadow = 'none'; });
 
             if(currentState === STATE.CURSED) {
-                st.innerText = "MALICE DETECTED";
+                st.innerText = "EVIL EYE DETECTED";
                 st.classList.add('mode-cursed');
                 box.classList.add('mode-cursed');
                 icons[2].style.color = 'var(--alert)';
@@ -354,8 +354,8 @@
                 st.innerText = "BARRIER ACTIVE";
                 st.classList.add('mode-mirror');
                 box.classList.add('mode-mirror');
-                icons[1].style.color = '#FF00FF';
-                icons[1].style.textShadow = '0 0 10px #FF00FF';
+                icons[1].style.color = '#008000';
+                icons[1].style.textShadow = '0 0 10px #008000';
             } else {
                 st.innerText = "OBSERVING";
             }
