@@ -404,7 +404,7 @@
                 // 1. CURSE PULSE (WAVE)
                 if(curseFactor > 0.01) {
                     // radial wave: frequency 0.4, speed 12
-                    const wave = Math.sin(r * 0.4 - time * 12) * 2.5 * curseFactor;
+                    const wave = Math.sin(r * 0.2 - time * 5) * 2.5 * curseFactor;
                     const angle = Math.atan2(ty, tx);
                     tx += Math.cos(angle) * wave;
                     ty += Math.sin(angle) * wave;
