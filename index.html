@@ -186,7 +186,8 @@
                 wireframe: true,
                 transparent: true,
                 opacity: 0.8,
-                blending: THREE.AdditiveBlending // Glow effect
+                blending: THREE.AdditiveBlending, // Glow effect
+                side: THREE.DoubleSide
             });
             barrierMesh = new THREE.Mesh(geo, mat);
             barrierMesh.visible = false;
